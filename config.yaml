@@ -1,8 +1,13 @@
 ---
 id: ruby200-regexp
 base_name: ruby200-regexp
-tags: []
-presentation_date: 
+tags:
+- onigmo
+- oniguruma
+- regexp
+- ruby
+- ruby2.0
+presentation_date: 2013/06/02
 version: 1.0.0
 licenses: []
 slideshare_id: 
@@ -13,6 +18,6 @@ author:
   markup_language: :rd
   name: Kazuhiro NISHIYAMA
   email: zn@mbf.nifty.com
-  rubygems_user: 
-  slideshare_user: 
+  rubygems_user: znz
+  slideshare_user: znzjp
   speaker_deck_user: 
