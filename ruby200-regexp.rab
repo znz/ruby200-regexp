@@ -1,28 +1,158 @@
-= タイトル
-
-# : subtitle
-#    サブタイトル
+= Regexp.new('2.0.0')
+: subtitle
+    Ruby 2.0.0 での正規表現の新機能
 : author
-   Kazuhiro NISHIYAMA
-# : institution
-#    所属
-# : content-source
-#    イベント名
-# : date
-#    2013/06/02
-# : allotted-time
-#    5m
-# : theme
-#    default
+    西山和広
+: institution
+    日本Rubyの会
+: theme
+    lightning-simple
+: allotted-time
+    5m
+= Onigmo
+* Onigmo (Oniguruma-mod)
 
-= 最初のスライド
+* NEWS of Ruby 2.0.0 says following only:
 
-  * 項目1
-  * 項目2
-  * 項目3
+    * Merge Onigmo
 
-= 二番目のスライド
+      https://github.com/k-takata/Onigmo
+* Details are unknown
 
-  # image
-  # src = https://raw.github.com/rabbit-shocker/rabbit/master/sample/lavie.png
-  # relative_height = 100
+  (('note:詳細不明'))
+
+== Note
+Ruby 2.0.0 で正規表現エンジンとして Onigmo がマージされましたが、
+NEWS にはマージされたと書いてあるだけで、詳しいことが全くわかりません。
+
+そこで、気になった新機能などについて調べてみた内容を発表します。
+= New feature (1) \K
+examples without /\K/
+  "foobar".sub(/(?<=foo)bar/, "") #=> "foo"
+  "foobar".sub(/(?<=fo*)bar/, "")
+   # SyntaxError: invalid pattern in look-behind: /(?<=fo*)bar/
+
+examples with /\K/
+  "foobar".sub(/foo\Kbar/, "") #=> "foo"
+  "foobar".sub(/fo*\Kbar/, "") #=> "foo"
+== Note
+最初に紹介するのは \K です。
+固定長なら戻り読み (look-behind) で同じことが出来ますが、
+\K なら可変長も出来ます。
+= New feature (1) \K
+Treat the first non-blank character of the line.
+
+examples with /\K/
+  gsub(/^ *\K(\d+)/) { $1.to_i+1 }
+
+examples without /\K/
+  gsub(/^( *)(\d+)/) { "#{$1}#{$2.to_i+1}" }
+
+== Note
+実用的な例として行頭の数値を増やすというものを書いてみました。
+
+\K なしで似たようなことをしようとするとキャプチャしておいて
+戻すなどの工夫が必要になります。
+
+= New feature (2) \R
+* Linebreak
+
+  (('note:改行文字'))
+* Unicode:
+   (?>\x0D\x0A|[\x0A-\x0D\x{85}\x{2028}\x{2029}])
+* Not Unicode:
+   (?>\x0D\x0A|[\x0A-\x0D])
+== Note
+次は改行にマッチする \R です。
+CRLF でも CR のみでも LF のみでもマッチしたいときに便利そうです。
+
+= New feature (3) \X
+* eXtended grapheme cluster
+
+  (('note:拡張書記素クラスタ'))
+* Unicode:
+   (?>\P{M}\p{M}*)
+* Not Unicode:
+   (?m:.)
+== Note
+次は「拡張書記素クラスタ」にマッチする \X です。
+「拡張書記素クラスタ」というのは、誤解を恐れずに簡単に言ってしまうなら、
+1文字に見える塊のことです。
+
+= Extended grapheme cluster
+* example:
+    "\u{304B 3099}"[/\X/].size #=> 2
+  * U+304B HIRAGANA LETTER KA
+  * U+3099 COMBINING KATAKANA-HIRAGANA VOICED SOUND MARK
+* see [UAX #29] for more detail
+
+  (('note:(Unicode標準附属書29)'))
+== Note
+例えば、ひらがなの「か」と合成用濁点は、見た目は1文字に見えます。
+こういう塊のことを extended grapheme cluster というそうです。
+
+\X はこのような塊にマッチします。
+
+= New feature (4)
+* conditional expression:
+   (?(cond)yes)
+   (?(cond)yes|no)
+
+* example:
+    " :f o o "[/:(['"])?(?(1)[\w\s]+\1|\w+)/]
+     #=> ":f"
+    ":'f o o'"[/:(['"])?(?(1)[\w\s]+\1|\w+)/]
+     #=> ":'f o o'"
+== Note
+次の新機能は条件式です。
+
+例としてクォートありとなしのシンボルっぽいものに
+マッチする正規表現をまとめるのに使ってみました。
+
+= (?adu)
+* character set option (character range option)
+
+  (('note:文字集合オプション (文字範囲オプション)'))
+
+* d: Default (compatible with Ruby 1.9.3)
+* a: ASCII
+* u: Unicode
+
+see doc/RE in Onigmo for more detail
+
+== Note
+次は文字集合オプションです。
+
+= (?adu)
+examples:
+  "\u{3042}"[/\w/]     #=> nil
+  "\u{3042}"[/(?a)\w/] #=> nil
+  "\u{3042}"[/(?d)\w/] #=> nil
+  "\u{3042}"[/(?u)\w/] #=> "あ"
+
+   /a\b/     =~ "a\u{3042}" #=> nil
+   /(?a)a\b/ =~ "a\u{3042}" #=> 0
+   /(?d)a\b/ =~ "a\u{3042}" #=> nil
+   /(?u)a\b/ =~ "a\u{3042}" #=> nil
+
+== Note
+例としてはこんな感じで動作が変わります。
+
+= (?adu)
+* (?-a), (?-d), (?-u) do not found
+* unlike (?-i), (?-m), (?-x)
+== Note
+ちなみに i,m,x と違って a,d,u はオフにすることは出来ません。
+
+= Character Property
+* support for Unicode blocks
+* example:
+    /\p{InHiragana}/ =~ "\u3042" #=> 0
+    /\p{InCJKUnifiedIdeographs}/ =~ "\u3042" #=> nil
+* see tool/enc-unicode.rb in Onigmo for more detail
+== Note
+Unicode ブロックのサポートが増えているようです。
+プロパティのあたりは情報が少ないので、ぜひ使ってみて、
+便利だと思ったら、ブログなどに情報をまとめて広めてみてください。
+
+= /\z/
